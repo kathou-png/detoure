@@ -7,7 +7,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN useradd -m -u 1000 app && mkdir -p /models && chown app:app /models
 USER app
-RUN python -c "from rembg import new_session; new_session('isnet-general-use')"
 COPY --chown=app:app app/ ./app/
 EXPOSE 8000
 HEALTHCHECK CMD curl -fs http://127.0.0.1:8000/health || exit 1
