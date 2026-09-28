@@ -9,5 +9,5 @@ RUN useradd -m -u 1000 app && mkdir -p /models && chown app:app /models
 USER app
 COPY --chown=app:app app/ ./app/
 EXPOSE 8000
-HEALTHCHECK CMD curl -fs http://127.0.0.1:8000/health || exit 1
+#HEALTHCHECK CMD curl -fs http://127.0.0.1:8000/health || exit 1
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
