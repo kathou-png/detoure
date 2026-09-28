@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Détoure</title>
+        <link
+            rel="icon"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --tapis: #1f4d43;
+                --tapis-ligne: rgba(255, 255, 255, 0.09);
+                --tapis-ligne-forte: rgba(255, 255, 255, 0.18);
+                --papier: #f7f7f2;
+                --encre: #14211d;
+                --encre-douce: #4d5b56;
+                --lame: #f2c230;
+                --erreur: #b3261e;
+                --titre:
+                    "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui,
+                    sans-serif;
+                --texte: "Figtree", "Segoe UI", system-ui, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+            }
+            body {
+                font-family: var(--texte);
+                color: var(--encre);
+                background: var(--papier);
+                min-height: 100vh;
+                display: grid;
+                grid-template-rows: auto 1fr;
+            }
+            header {
+                display: flex;
+                align-items: baseline;
+                gap: 1rem;
+                flex-wrap: wrap;
+                padding: 1.25rem clamp(1rem, 4vw, 2.5rem);
+            }
+            h1 {
+                font-family: var(--titre);
+                font-weight: 700;
+                font-size: clamp(1.8rem, 4vw, 2.4rem);
+                letter-spacing: -0.02em;
+                margin: 0;
+            }
+            header p {
+                margin: 0;
+                color: var(--encre-douce);
+            }
+
+            main {
+                display: grid;
+                grid-template-columns: 1fr 300px;
+                gap: 1.25rem;
+                padding: 0 clamp(1rem, 4vw, 2.5rem) 2rem;
+            }
+            @media (max-width: 860px) {
+                main {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Le tapis de découpe */
+            .tapis {
+                position: relative;
+                border-radius: 14px;
+                min-height: 60vh;
+                background-color: var(--tapis);
+                background-image:
+                    linear-gradient(
+                        var(--tapis-ligne-forte) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(
+                        90deg,
+                        var(--tapis-ligne-forte) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(var(--tapis-ligne) 1px, transparent 1px),
+                    linear-gradient(
+                        90deg,
+                        var(--tapis-ligne) 1px,
+                        transparent 1px
+                    );
+                background-size:
+                    100px 100px,
+                    100px 100px,
+                    20px 20px,
+                    20px 20px;
+                display: grid;
+                place-items: center;
+                padding: clamp(1rem, 3vw, 2rem);
+                color: var(--papier);
+                overflow: hidden;
+            }
+            .tapis.survol {
+                outline: 3px dashed var(--lame);
+                outline-offset: -12px;
+            }
+
+            .vide {
+                text-align: center;
+                max-width: 34ch;
+            }
+            .vide h2 {
+                font-family: var(--titre);
+                font-weight: 500;
+                font-size: 1.6rem;
+                margin: 0 0 0.5rem;
+            }
+            .vide p {
+                margin: 0 0 1.25rem;
+                opacity: 0.8;
+                line-height: 1.5;
+            }
+
+            .attente {
+                text-align: center;
+            }
+            .attente p {
+                max-width: 32ch;
+                margin: 1rem auto 0;
+                opacity: 0.85;
+                line-height: 1.5;
+            }
+            .ciseaux {
+                font-size: 2.5rem;
+                display: inline-block;
+                animation: couper 1s ease-in-out infinite;
+            }
+            @keyframes couper {
+                50% {
+                    transform: translateX(14px) rotate(-8deg);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .ciseaux {
+                    animation: none;
+                }
+            }
+
+            .message-erreur {
+                background: var(--papier);
+                color: var(--erreur);
+                border-radius: 8px;
+                padding: 0.9rem 1.1rem;
+                max-width: 40ch;
+                line-height: 1.45;
+            }
+
+            /* Comparateur avant / après */
+            .comparateur {
+                position: relative;
+                aspect-ratio: var(--ratio, 1);
+                width: min(100%, calc(64vh * var(--ratio, 1)));
+                border-radius: 6px;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            }
+            .fond-damier {
+                background-color: #fff;
+                background-image: conic-gradient(
+                    #d9d9d9 25%,
+                    #fff 0 50%,
+                    #d9d9d9 0 75%,
+                    #fff 0
+                );
+                background-size: 20px 20px;
+            }
+            .comparateur img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                user-select: none;
+                pointer-events: none;
+            }
+            .avant {
+                position: absolute;
+                inset: 0;
+                clip-path: inset(0 calc(100% - var(--pos, 50%)) 0 0);
+            }
+            .poignee {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: var(--pos, 50%);
+                width: 3px;
+                background: var(--lame);
+                transform: translateX(-50%);
+                pointer-events: none;
+            }
+            .poignee::after {
+                content: "⟷";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: var(--lame);
+                color: var(--encre);
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                font-weight: 700;
+            }
+            .comparateur input[type="range"] {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                opacity: 0;
+                cursor: ew-resize;
+            }
+            .comparateur:has(input:focus-visible) {
+                outline: 3px solid var(--lame);
+                outline-offset: 4px;
+            }
+            .etiquette {
+                position: absolute;
+                bottom: 0.6rem;
+                font-size: 0.8rem;
+                font-weight: 600;
+                background: rgba(20, 33, 29, 0.75);
+                color: var(--papier);
+                padding: 0.2rem 0.55rem;
+                border-radius: 4px;
+                pointer-events: none;
+            }
+            .etiquette.g {
+                left: 0.6rem;
+            }
+            .etiquette.d {
+                right: 0.6rem;
+            }
+            /* Photo choisie mais pas encore détourée : on montre l'original seul */
+            .comparateur.sans-resultat .avant {
+                clip-path: none;
+            }
+            .comparateur.sans-resultat #img-resultat,
+            .comparateur.sans-resultat .poignee,
+            .comparateur.sans-resultat .etiquette.d,
+            .comparateur.sans-resultat input {
+                display: none;
+            }
+
+            /* Panneau de réglages */
+            aside {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            fieldset {
+                border: 0;
+                padding: 0;
+                margin: 0;
+            }
+            legend,
+            label.titre-champ {
+                font-family: var(--titre);
+                font-weight: 500;
+                font-size: 1.05rem;
+                margin-bottom: 0.6rem;
+                display: block;
+            }
+            select {
+                width: 100%;
+                font: inherit;
+                padding: 0.6rem 0.7rem;
+                border-radius: 8px;
+                border: 1.5px solid #c9cfc9;
+                background: #fff;
+                color: var(--encre);
+            }
+            .aide {
+                font-size: 0.88rem;
+                color: var(--encre-douce);
+                margin: 0.45rem 0 0;
+                line-height: 1.4;
+            }
+            .case {
+                display: flex;
+                gap: 0.6rem;
+                align-items: flex-start;
+                cursor: pointer;
+            }
+            .case input {
+                margin-top: 0.2rem;
+                accent-color: var(--tapis);
+            }
+
+            button {
+                font: inherit;
+                font-weight: 600;
+                border-radius: 999px;
+                padding: 0.75rem 1.3rem;
+                cursor: pointer;
+                border: 2px solid var(--encre);
+                transition: transform 0.1s;
+            }
+            button:active {
+                transform: scale(0.97);
+            }
+            button:focus-visible {
+                outline: 3px solid var(--lame);
+                outline-offset: 2px;
+            }
+            button:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+            .principal {
+                background: var(--lame);
+                border-color: var(--lame);
+                color: var(--encre);
+            }
+            .secondaire {
+                background: transparent;
+                color: var(--encre);
+            }
+            .tapis .secondaire {
+                color: var(--papier);
+                border-color: var(--papier);
+            }
+            .actions {
+                display: flex;
+                flex-direction: column;
+                gap: 0.6rem;
+            }
+            [hidden] {
+                display: none !important;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Détoure</h1>
+            <p>
+                Remove the background from your photos. Images stay on your
+                server.
+            </p>
+        </header>
+
+        <main>
+            <section class="tapis" id="tapis" aria-live="polite">
+                <div class="vide" id="etat-vide">
+                    <h2>Drop a photo here</h2>
+                    <p>
+                        Or paste it with Ctrl+V. JPEG, PNG, WebP or HEIC,
+                        up to <span id="taille-max">25</span> MB.
+                    </p>
+                    <button class="principal" id="choisir">
+                        Choose a photo
+                    </button>
+                </div>
+
+                <div class="attente" id="etat-attente" hidden>
+                    <span class="ciseaux" aria-hidden="true">✂️</span>
+                    <p id="texte-attente">Removing background…</p>
+                </div>
+
+                <div id="etat-erreur" hidden>
+                    <p class="message-erreur" id="texte-erreur"></p>
+                    <p style="text-align: center">
+                        <button class="secondaire" id="reessayer">
+                            Choose another photo
+                        </button>
+                    </p>
+                </div>
+
+                <div class="comparateur fond-damier" id="etat-resultat" hidden>
+                    <img id="img-resultat" alt="Photo with background removed" />
+                    <div class="avant">
+                        <img id="img-original" alt="Original photo" />
+                    </div>
+                    <div class="poignee"></div>
+                    <span class="etiquette g" id="etiquette-avant">Before</span
+                    ><span class="etiquette d">After</span>
+                    <input
+                        type="range"
+                        id="curseur"
+                        min="0"
+                        max="100"
+                        value="50"
+                        aria-label="Compare before and after"
+                    />
+                </div>
+            </section>
+
+            <aside>
+                <div>
+                    <label class="titre-champ" for="modele">Model</label>
+                    <select id="modele"></select>
+                    <p class="aide" id="aide-modele"></p>
+                </div>
+
+                <label class="case">
+                    <input type="checkbox" id="contours-fins" />
+                    <span
+                        >Fine edges<br /><span class="aide" style="margin: 0"
+                            >Better results on hair and fur, but
+                            slower.</span
+                        ></span
+                    >
+                </label>
+
+                <div class="actions">
+                    <button class="principal" id="lancer" disabled>
+                        Remove background
+                    </button>
+                    <button class="secondaire" id="telecharger" disabled>
+                        Download PNG
+                    </button>
+                    <button class="secondaire" id="nouvelle" disabled>
+                        New photo
+                    </button>
+                </div>
+            </aside>
+        </main>
+
+        <input type="file" id="fichier" accept="image/*,.heic,.heif" hidden />
+
+        <script>
+            const $ = (id) => document.getElementById(id);
+            const etats = [
+                "etat-vide",
+                "etat-attente",
+                "etat-erreur",
+                "etat-resultat",
+            ];
+            let fichierCourant = null,
+                urlResultat = null,
+                urlOriginal = null,
+                enCours = false,
+                modeles = [];
+
+            function afficher(etat) {
+                etats.forEach((e) => ($(e).hidden = e !== etat));
+            }
+
+            function majBoutons() {
+                const fait = urlResultat !== null;
+                $("lancer").disabled = enCours || !fichierCourant;
+                $("lancer").textContent = fait
+                    ? "Run again with these settings"
+                    : "Remove background";
+                // Une fois le résultat obtenu, le bouton mis en avant devient le téléchargement
+                $("lancer").className = fait ? "secondaire" : "principal";
+                $("telecharger").className = fait ? "principal" : "secondaire";
+                $("telecharger").disabled = enCours || !fait;
+                $("nouvelle").disabled = enCours || !fichierCourant;
+            }
+
+            function oublierResultat() {
+                if (urlResultat) URL.revokeObjectURL(urlResultat);
+                urlResultat = null;
+                $("img-resultat").removeAttribute("src");
+            }
+
+            function ajusterRatio(img) {
+                $("etat-resultat").style.setProperty(
+                    "--ratio",
+                    img.naturalWidth / img.naturalHeight,
+                );
+            }
+
+            async function chargerModeles() {
+                try {
+                    const r = await fetch("/api/modeles");
+                    const d = await r.json();
+                    modeles = d.modeles;
+                    $("taille-max").textContent = d.taille_max_mo;
+                    $("modele").innerHTML = modeles
+                        .map(
+                            (m) =>
+                                `<option value="${m.id}" ${m.id === d.defaut ? "selected" : ""}>${m.description.split(" : ")[0]}</option>`,
+                        )
+                        .join("");
+                    majAide();
+                } catch {
+                    $("modele").innerHTML =
+                        '<option value="isnet-general-use">General purpose</option>';
+                }
+            }
+            function majAide() {
+                const m = modeles.find((m) => m.id === $("modele").value);
+                $("aide-modele").textContent = m
+                    ? m.description.split(" : ")[1]
+                    : "";
+            }
+
+            async function detourer() {
+                if (!fichierCourant || enCours) return;
+                enCours = true;
+                majBoutons();
+                afficher("etat-attente");
+                $("texte-attente").textContent = "Removing background…";
+                const lent = setTimeout(() => {
+                    $("texte-attente").textContent =
+                        "Still working. The first time a model is used, it has to be downloaded and loaded into memory.";
+                }, 6000);
+
+                const form = new FormData();
+                form.append("image", fichierCourant);
+                form.append("modele", $("modele").value);
+                form.append("contours_fins", $("contours-fins").checked);
+
+                try {
+                    const r = await fetch("/api/detourer", {
+                        method: "POST",
+                        body: form,
+                    });
+                    if (!r.ok) {
+                        let msg = `Background removal failed (error ${r.status}).`;
+                        try {
+                            msg = (await r.json()).detail || msg;
+                        } catch {}
+                        throw new Error(msg);
+                    }
+                    const blob = await r.blob();
+                    oublierResultat();
+                    urlResultat = URL.createObjectURL(blob);
+
+                    await new Promise((ok) => {
+                        const img = $("img-resultat");
+                        img.onload = () => {
+                            ajusterRatio(img);
+                            ok();
+                        };
+                        img.onerror = ok;
+                        img.src = urlResultat;
+                    });
+                    $("etiquette-avant").textContent = "Before";
+                    $("etat-resultat").classList.remove("sans-resultat");
+                    afficher("etat-resultat");
+                } catch (e) {
+                    oublierResultat();
+                    $("texte-erreur").textContent =
+                        e.message === "Failed to fetch"
+                            ? "The server is not responding. Check that the app is still running."
+                            : e.message;
+                    afficher("etat-erreur");
+                } finally {
+                    clearTimeout(lent);
+                    enCours = false;
+                    majBoutons();
+                }
+            }
+
+            function telecharger() {
+                if (!urlResultat) return;
+                const a = document.createElement("a");
+                const base = (fichierCourant?.name || "image").replace(
+                    /\.[^.]+$/,
+                    "",
+                );
+                a.href = urlResultat;
+                a.download = `${base}-no-bg.png`;
+                a.click();
+            }
+
+            // Affiche la photo choisie seule ; le détourage attend le clic sur « Enlever le fond »
+            function recevoir(fichiers) {
+                if (enCours) return;
+                const f = [...fichiers].find(
+                    (f) =>
+                        f.type.startsWith("image/") ||
+                        /\.hei[cf]$/i.test(f.name),
+                );
+                if (!f) return;
+
+                fichierCourant = f;
+                oublierResultat();
+                if (urlOriginal) URL.revokeObjectURL(urlOriginal);
+                urlOriginal = URL.createObjectURL(f);
+
+                const cadre = $("etat-resultat");
+                cadre.classList.add("sans-resultat");
+                cadre.style.setProperty("--ratio", 4 / 3);
+                $("etiquette-avant").textContent = f.name;
+                const original = $("img-original");
+                original.onload = () => ajusterRatio(original);
+                // HEIC n'est pas lisible par tous les navigateurs : le cadre reste vide avec le nom du fichier
+                original.onerror = () => original.removeAttribute("src");
+                original.src = urlOriginal;
+
+                afficher("etat-resultat");
+                majBoutons();
+            }
+
+            // Événements
+            $("choisir").onclick = () => $("fichier").click();
+            $("reessayer").onclick = () => $("fichier").click();
+            $("nouvelle").onclick = () => {
+                $("fichier").value = "";
+                $("fichier").click();
+            };
+            $("fichier").onchange = (e) => recevoir(e.target.files);
+            $("lancer").onclick = detourer;
+            $("telecharger").onclick = telecharger;
+            $("modele").onchange = majAide;
+            $("curseur").oninput = (e) =>
+                $("etat-resultat").style.setProperty(
+                    "--pos",
+                    e.target.value + "%",
+                );
+
+            const tapis = $("tapis");
+            ["dragenter", "dragover"].forEach((t) =>
+                tapis.addEventListener(t, (e) => {
+                    e.preventDefault();
+                    tapis.classList.add("survol");
+                }),
+            );
+            ["dragleave", "drop"].forEach((t) =>
+                tapis.addEventListener(t, (e) => {
+                    e.preventDefault();
+                    tapis.classList.remove("survol");
+                }),
+            );
+            tapis.addEventListener("drop", (e) =>
+                recevoir(e.dataTransfer.files),
+            );
+            document.addEventListener("paste", (e) =>
+                recevoir(e.clipboardData.files),
+            );
+
+            majBoutons();
+            chargerModeles();
+        </script>
+    </body>
+</html>
